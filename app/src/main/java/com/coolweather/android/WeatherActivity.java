@@ -4,11 +4,16 @@ import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Build;
 import android.preference.PreferenceManager;
+import android.support.v4.view.GravityCompat;
+import android.support.v4.widget.DrawerLayout;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -30,6 +35,14 @@ import okhttp3.Response;
 public class WeatherActivity extends AppCompatActivity {
 
     private static final String TAG = "WeatherActivity";
+
+    public DrawerLayout drawerLayout;
+
+    private Button navButton;
+
+    public SwipeRefreshLayout swipeRefresh;
+
+    private String mWeatherId;
 
     private ImageView bingPicImg;
 
@@ -68,6 +81,12 @@ public class WeatherActivity extends AppCompatActivity {
         Log.d(TAG, "onCreate: commit the code in here.");
         //初始化各控件
         bingPicImg = (ImageView) findViewById(R.id.bing_pic_img);
+
+        drawerLayout=(DrawerLayout) findViewById(R.id.drawer_layout);
+        navButton=(Button) findViewById(R.id.nav_button);
+
+        swipeRefresh=(SwipeRefreshLayout) findViewById(R.id.swipe_refresh);
+        swipeRefresh.setColorSchemeResources(R.color.colorPrimary);
         weatherLayout = (ScrollView) findViewById(R.id.weather_layout);
         titleCity = (TextView) findViewById(R.id.title_city);
         titleUpdateTime = (TextView) findViewById(R.id.title_update_time);
@@ -84,15 +103,22 @@ public class WeatherActivity extends AppCompatActivity {
         if (weatherString != null) {
             //有缓存，直接解析天气信息
             Weather weather = Utility.handleWeatherResponse(weatherString);
+            mWeatherId=weather.basic.weatherId;
             showWeatherInfo(weather);
         } else {
             Log.d(TAG, "onCreate: need to request the server.");
             //没有缓存，去服务器查询
-            String weatherId = getIntent().getStringExtra("weather_id");
-            Log.d(TAG, "onCreate: the weatherId is " + weatherId);
+            mWeatherId= getIntent().getStringExtra("weather_id");
+            Log.d(TAG, "onCreate: the weatherId is " + mWeatherId);
             weatherLayout.setVisibility(View.INVISIBLE);
-            requestWeather(weatherId);
+            requestWeather(mWeatherId);
         }
+        swipeRefresh.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                requestWeather(mWeatherId);
+            }
+        });
         /**
          * 判断缓存背景图片
          */
@@ -102,6 +128,15 @@ public class WeatherActivity extends AppCompatActivity {
         } else {
             loadBingPic();
         }
+        /**
+         *
+         */
+        navButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                drawerLayout.openDrawer(GravityCompat.START);
+            }
+        });
 
 
     }
@@ -141,7 +176,7 @@ public class WeatherActivity extends AppCompatActivity {
      *
      * @param weatherId
      */
-    private void requestWeather(String weatherId) {
+    public void requestWeather(final String weatherId) {
         String weatherUrl = "http://guolin.tech/api/weather?cityid=" + weatherId + "&key=002d5fb087b346689bb093b6f93b763a";
         HttpUtil.sendOkHttpRequest(weatherUrl, new Callback() {
             @Override
@@ -149,6 +184,7 @@ public class WeatherActivity extends AppCompatActivity {
 //                e.printStackTrace();
                 Log.d(TAG, "onFailure: failure method");
                 Toast.makeText(WeatherActivity.this, "获取天气信息失败", Toast.LENGTH_SHORT).show();
+                swipeRefresh.setRefreshing(false);
             }
 
             @Override
@@ -164,12 +200,14 @@ public class WeatherActivity extends AppCompatActivity {
                                     WeatherActivity.this).edit();
                             editor.putString("weather", responseText);
                             editor.apply();
+                            mWeatherId=weather.basic.weatherId;
                             Log.d(TAG, "run: before the err?");
                             showWeatherInfo(weather);
                         } else {
                             Log.d(TAG, "run: failure branch");
                             Toast.makeText(WeatherActivity.this, "获取天气信息失败", Toast.LENGTH_SHORT).show();
                         }
+                        swipeRefresh.setRefreshing(false);
                     }
                 });
             }
