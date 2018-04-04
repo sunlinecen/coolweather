@@ -185,7 +185,7 @@ public class WeatherActivity extends AppCompatActivity {
             public void onFailure(Call call, IOException e) {
 //                e.printStackTrace();
                 Log.d(TAG, "onFailure: failure method");
-                Toast.makeText(WeatherActivity.this, "获取天气信息失败", Toast.LENGTH_SHORT).show();
+//                Toast.makeText(WeatherActivity.this, "获取天气信息失败", Toast.LENGTH_SHORT).show();
                 swipeRefresh.setRefreshing(false);
             }
 
